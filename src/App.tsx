@@ -1,8 +1,10 @@
-import { createRoot } from "@react-three/fiber"
+import { createRoot, extend } from "@react-three/fiber"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
-import { useEffect, useRef } from "react"
-import ThreeApp from "./ThreeApp"
+import { useEffect, useState } from "react"
+import * as THREE from "three"
+
+extend(THREE)
 
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN ?? ""
 
@@ -12,13 +14,13 @@ const fullWidthHeight = {
 }
 
 const App = () => {
-  const mapRef = useRef<HTMLDivElement>(null)
+  const [mapElement, setMapElement] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (!mapRef.current) return
+    if (!mapElement) return
 
     const map = new mapboxgl.Map({
-      container: mapRef.current, // container ID
+      container: mapElement, // container ID
       style: "mapbox://styles/mapbox/streets-v11", // style URL
       center: [-0.0804, 51.5145], // starting position [lng, lat]
       zoom: 18, // starting zoom
@@ -27,23 +29,33 @@ const App = () => {
       },
     })
 
-    map.on("style.load", () => {
-      map.setFog({}) // Set the default atmosphere style
-    })
-
     // const size = { width: window.innerWidth, height: window.innerHeight }
-    const canvas = mapRef.current.querySelector("canvas")
+    const canvas = mapElement.querySelector("canvas")
 
     if (!canvas) return
 
     const root = createRoot(canvas)
 
-    root.render(<ThreeApp />)
-  }, [])
+    map.on("style.load", () => {
+      map.setFog({}) // Set the default atmosphere style
+      map.addLayer({
+        id: "custom_layer",
+        type: "custom",
+        renderingMode: "3d",
+        onAdd: function (map, mbxContext) {
+          root.configure({ gl: mbxContext })
+        },
+
+        render: function (gl, matrix) {},
+      })
+    })
+
+    return () => root.unmount()
+  }, [mapElement])
 
   return (
     <div style={{ position: "absolute", ...fullWidthHeight }}>
-      <div ref={mapRef} style={fullWidthHeight} />
+      <div ref={setMapElement} style={fullWidthHeight} />
     </div>
   )
 }
