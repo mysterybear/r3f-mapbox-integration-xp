@@ -1,4 +1,11 @@
-import { createRoot, extend } from "@react-three/fiber"
+import {
+  addAfterEffect,
+  addEffect,
+  advance,
+  createRoot,
+  extend,
+  ReconcilerRoot,
+} from "@react-three/fiber"
 import mapboxgl, { AnyLayer } from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { useEffect, useState } from "react"
@@ -17,26 +24,51 @@ const fullWidthHeight = {
 const App = () => {
   const [mapElement, setMapElement] = useState<HTMLDivElement | null>(null)
 
+  const [root, setRoot] = useState<ReconcilerRoot<HTMLCanvasElement> | null>(
+    null
+  )
+
+  const [map, setMap] = useState<mapboxgl.Map | null>(null)
+
   useEffect(() => {
     if (!mapElement) return
 
-    const map = new mapboxgl.Map({
-      container: mapElement, // container ID
-      style: "mapbox://styles/mapbox/streets-v11", // style URL
-      center: [-0.0804, 51.5145], // starting position [lng, lat]
-      zoom: 18, // starting zoom
-      antialias: true,
-      // projection: {
-      //   name: "globe",
-      // },
-    })
+    if (!map) {
+      setMap(
+        new mapboxgl.Map({
+          container: mapElement, // container ID
+          style: "mapbox://styles/mapbox/streets-v11", // style URL
+          center: [-0.0804, 51.5145], // starting position [lng, lat]
+          zoom: 18, // starting zoom
+          antialias: true,
+          // projection: {
+          //   name: "globe",
+          // },
+        })
+      )
+    }
+    if (!map) return
 
     // const size = { width: window.innerWidth, height: window.innerHeight }
     const canvas = mapElement.querySelector("canvas")
 
     if (!canvas) return
 
-    const root = createRoot(canvas)
+    if (!root) setRoot(createRoot(canvas))
+    if (!root) return
+
+    const render = (ctx?: WebGLRenderingContext, matrix?: number[]): void => {
+      advance(Date.now(), true)
+      map.triggerRepaint()
+    }
+
+    const handleResize = () => {
+      const size = { width: window.innerWidth, height: window.innerHeight }
+      root.configure({ size })
+      render()
+    }
+
+    window.addEventListener("resize", handleResize)
 
     const customLayer: AnyLayer = {
       id: "custom_layer",
@@ -44,6 +76,7 @@ const App = () => {
       renderingMode: "3d",
       onAdd: function (map, context) {
         root.configure({
+          frameloop: "never",
           gl: {
             alpha: true,
             antialias: true,
@@ -57,15 +90,17 @@ const App = () => {
             width: map.getCanvas().clientWidth,
             height: map.getCanvas().clientHeight,
           },
+          onCreated: (state) => {
+            addEffect(() => state.gl.resetState())
+            addAfterEffect(() => map.triggerRepaint())
+          },
         })
 
         map.repaint = false
-      },
 
-      render: function (gl, matrix) {
         root.render(<ThreeApp />)
-        map.triggerRepaint()
       },
+      render,
     }
 
     map.on("style.load", () => {
@@ -74,7 +109,7 @@ const App = () => {
     })
 
     return () => root.unmount()
-  }, [mapElement])
+  }, [map, mapElement, root])
 
   return (
     <div style={{ position: "absolute", ...fullWidthHeight }}>
