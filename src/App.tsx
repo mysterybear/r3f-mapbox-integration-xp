@@ -3,6 +3,7 @@ import {
   addEffect,
   advance,
   createRoot,
+  events,
   extend,
   ReconcilerRoot,
 } from "@react-three/fiber"
@@ -10,6 +11,7 @@ import mapboxgl, { AnyLayer } from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { useEffect, useState } from "react"
 import * as THREE from "three"
+import { useMap } from "./store"
 import ThreeApp from "./ThreeApp"
 
 extend(THREE)
@@ -28,7 +30,7 @@ const App = () => {
     null
   )
 
-  const [map, setMap] = useState<mapboxgl.Map | null>(null)
+  const [map, setMap] = useMap()
 
   useEffect(() => {
     if (!mapElement) return
@@ -41,12 +43,11 @@ const App = () => {
           center: [-0.0804, 51.5145], // starting position [lng, lat]
           zoom: 18, // starting zoom
           antialias: true,
-          // projection: {
-          //   name: "globe",
-          // },
+          // interactive: false,
         })
       )
     }
+
     if (!map) return
 
     // const size = { width: window.innerWidth, height: window.innerHeight }
@@ -76,6 +77,7 @@ const App = () => {
       renderingMode: "3d",
       onAdd: function (map, context) {
         root.configure({
+          events,
           frameloop: "never",
           gl: {
             alpha: true,
@@ -91,6 +93,7 @@ const App = () => {
             height: map.getCanvas().clientHeight,
           },
           onCreated: (state) => {
+            state.events.connect?.(mapElement)
             addEffect(() => state.gl.resetState())
             addAfterEffect(() => map.triggerRepaint())
           },
@@ -109,7 +112,7 @@ const App = () => {
     })
 
     return () => root.unmount()
-  }, [map, mapElement, root])
+  }, [map, mapElement, root, setMap])
 
   return (
     <div style={{ position: "absolute", ...fullWidthHeight }}>
