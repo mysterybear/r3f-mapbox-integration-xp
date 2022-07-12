@@ -11,6 +11,7 @@ import mapboxgl, { AnyLayer } from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { useEffect, useState } from "react"
 import * as THREE from "three"
+import { DEFAULT_ORIGIN } from "./constants"
 import { useMap } from "./store"
 import ThreeApp from "./ThreeApp"
 
@@ -40,7 +41,7 @@ const App = () => {
         new mapboxgl.Map({
           container: mapElement, // container ID
           style: "mapbox://styles/mapbox/streets-v11", // style URL
-          center: [-0.0804, 51.5145], // starting position [lng, lat]
+          center: DEFAULT_ORIGIN, // starting position [lng, lat]
           zoom: 18, // starting zoom
           antialias: true,
           // interactive: false,
