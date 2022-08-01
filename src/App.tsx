@@ -5,15 +5,15 @@ import {
   createRoot,
   events,
   extend,
-  ReconcilerRoot,
 } from "@react-three/fiber"
 import mapboxgl, { AnyLayer } from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { useEffect, useState } from "react"
 import * as THREE from "three"
 import { DEFAULT_ORIGIN } from "./constants"
-import { useMap } from "./store"
+import store, { useMap, useR3FRoot } from "./store"
 import ThreeApp from "./ThreeApp"
+import { reverseV2 } from "./utils"
 
 extend(THREE)
 
@@ -27,9 +27,7 @@ const fullWidthHeight = {
 const App = () => {
   const [mapElement, setMapElement] = useState<HTMLDivElement | null>(null)
 
-  const [root, setRoot] = useState<ReconcilerRoot<HTMLCanvasElement> | null>(
-    null
-  )
+  const [root, setRoot] = useR3FRoot()
 
   const [map, setMap] = useMap()
 
@@ -41,7 +39,7 @@ const App = () => {
         new mapboxgl.Map({
           container: mapElement, // container ID
           style: "mapbox://styles/mapbox/streets-v11", // style URL
-          center: DEFAULT_ORIGIN, // starting position [lng, lat]
+          center: reverseV2(DEFAULT_ORIGIN), // starting position [lng, lat]
           zoom: 18, // starting zoom
           antialias: true,
           // interactive: false,
@@ -64,14 +62,6 @@ const App = () => {
       map.triggerRepaint()
     }
 
-    const handleResize = () => {
-      const size = { width: window.innerWidth, height: window.innerHeight }
-      root.configure({ size })
-      render()
-    }
-
-    window.addEventListener("resize", handleResize)
-
     const customLayer: AnyLayer = {
       id: "custom_layer",
       type: "custom",
@@ -87,7 +77,8 @@ const App = () => {
             canvas: map.getCanvas(),
             context,
             outputEncoding: THREE.sRGBEncoding,
-            preserveDrawingBuffer: false,
+            preserveDrawingBuffer: true,
+            localClippingEnabled: true,
           },
           size: {
             width: map.getCanvas().clientWidth,
@@ -113,7 +104,7 @@ const App = () => {
     })
 
     return () => root.unmount()
-  }, [map, mapElement, root, setMap])
+  }, [map, mapElement, root, setMap, setRoot])
 
   return (
     <div style={{ position: "absolute", ...fullWidthHeight }}>

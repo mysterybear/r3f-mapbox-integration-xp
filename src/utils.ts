@@ -86,3 +86,5 @@ export const circumferenceAtLatitude = (latitude: number) =>
 
 export const mercatorZfromAltitude = (altitude: number, lat: number) =>
   altitude / circumferenceAtLatitude(lat)
+
+export const reverseV2 = ([x, y]: [number, number]): [number, number] => [y, x]
